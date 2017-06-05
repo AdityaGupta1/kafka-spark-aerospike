@@ -37,7 +37,7 @@ public class Main {
             printWithLines("Missing zkQuorum! Using default of \"localhost:9092,localhost:2181\". To specify a zkQuorum, give it as the second argument to the program.", 5);
             zkQuorum = "localhost:9092,localhost:2181";
         } else {
-            // any characters, then a colon (:), then any digits
+            // any characters, then a colon (:), then digits
             Pattern addressPattern = Pattern.compile(".+:\\d+");
 
             zkQuorum = args[1];
