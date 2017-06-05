@@ -54,7 +54,7 @@ spark-submit --class "Main" --master local[*] target/kafka-spark-aerospike-1.0.j
 +
 If you changed the ZooKeeper IP addresses while setting up Kafka, use those instead of `localhost:9092` and `localhost:2181`
 
-{nbsp} +
+{empty} +
 Once Kafka and Spark setup is complete, you should be able to type messages into the Kafka server console window and receive them in the Spark application console window.
 
 === Aerospike Setup
