@@ -1,5 +1,4 @@
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaPairReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -38,7 +37,6 @@ public class Main {
         // Durations.seconds(1) = 1 second batch interval
         JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(1));
         printWithLines("created JavaStreamingContext", 2);
-        JavaSparkContext sc = jssc.sparkContext();
         printWithLines("created JavaSparkContext", 2);
 
         Map<String, Integer> topics = new HashMap<>();

@@ -1,0 +1,61 @@
+= kafka-spark-aerospike
+
+A Java project that pulls data from Apache Kafka, manipulates it through Apache Spark, and sends it to an Aerospike database
+
+== Getting Started
+
+=== Kafka Setup
+
+Instructions are available on the https://kafka.apache.org/quickstart[Kafka quickstart page].
+
+Follow steps 1 - 4 to start the server and a producer (message sender).
+
+=== Spark Setup
+
+. Download and install http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html[JDK (Java Development Kit)] if you don't have it already
+
+. Download https://maven.apache.org/download.cgi[Maven] if you don't have it already
+.. Extract the Maven archive (should be called something like `apache-maven-3.5.0-bin.tar.gz`)
+.. Add the `bin` folder inside to your PATH:
+... Windows:
++
+Refer to https://www.howtogeek.com/118594/how-to-edit-your-system-path-for-easy-command-line-access/[this] webpage for help with adding directories to your PATH
+
+... Mac:
++
+Run the following command and replace `/path/to/maven/bin` with the actual path to your `bin` folder
++
+[text]
+----
+export PATH=$PATH:/path/to/maven/bin
+----
+
+. Download Spark http://spark.apache.org/downloads.html.tgz[here].
+.. Extract the archive and navigate to it in Terminal or Command Prompt; replace `/path/to/spark-2.1.1-bin-hadoop2.7` with the actual path to the `spark-2.1.1-bin-hadoop2.7` folder
++
+[text]
+----
+cd /path/to/spark-2.1.1-bin-hadoop2.7
+----
+
+. Package the applications and its dependencies into one jar
++
+[text]
+----
+mvn package
+----
+
+. Submit the application
++
+[text]
+----
+spark-submit --class "Main" --master local[*] target/kafka-spark-aerospike-1.0.jar "localhost:9092,localhost:2181"
+----
++
+If you changed the ZooKeeper IP addresses while setting up Kafka, use those instead of `localhost:9092` and `localhost:2181`
+
+Once Kafka and Spark setup is complete, you should be able to type messages into the Kafka server console window and receive them in the Spark application console window.
+
+=== Aerospike Setup
+
+Will be added once Aerospike integration is added
