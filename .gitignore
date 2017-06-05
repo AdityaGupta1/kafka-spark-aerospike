@@ -1,0 +1,6 @@
+.DS_Store
+.idea/
+target/
+start.sh
+kafka-spark-aerospike.iml
+lib/
