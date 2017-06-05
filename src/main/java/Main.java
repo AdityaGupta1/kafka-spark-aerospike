@@ -9,9 +9,30 @@ import scala.Tuple2;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class Main {
     public static void main(String[] args) throws InterruptedException {
+
+        String zkQuorum;
+
+        if (args.length < 1) {
+            printWithLines("Missing zkQuorum! Using default of \"localhost:9092,localhost:2181\". To specify a zkQuorum, give it as the first argument to the program.", 5);
+            zkQuorum = "localhost:9092,localhost:2181";
+        } else {
+            // any characters, then a colon (:), then any digits
+            Pattern addressPattern = Pattern.compile(".+:\\d+");
+
+            // ""
+            zkQuorum = args[0];
+            for (String address : zkQuorum.split(",")) {
+                if (!addressPattern.matcher(address).matches()) {
+                    printWithLines("zkQuorum format is incorrect! Please specify it as a comma-separated list of IP addressed and try again.", 5);
+                    return;
+                }
+            }
+        }
+
         SparkConf conf = new SparkConf().setAppName("KafkaSparkAerospike");
         printWithLines("created SparkConf", 2);
         // Durations.seconds(1) = 1 second batch interval
@@ -25,12 +46,15 @@ public class Main {
 
         printWithLines("created topics HashMap", 2);
 
+
+
         JavaPairReceiverInputDStream<String, String> kafkaStream =
                 KafkaUtils.createStream(jssc,
-                        "localhost:2181,localhost:9092", "idk", topics);
+                        zkQuorum, "kafka-spark-aerospike", topics);
 
         printWithLines("created JavaPairReceiverInputDStream", 2);
 
+        // set operation to run on each RDD
         kafkaStream.foreachRDD(rdd -> {
             if(!rdd.isEmpty()){
                 List<Tuple2<String, String>> tuples = rdd.collect();
