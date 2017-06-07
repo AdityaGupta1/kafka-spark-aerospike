@@ -1,3 +1,7 @@
+import com.aerospike.client.AerospikeClient;
+import com.aerospike.client.Bin;
+import com.aerospike.client.Key;
+import com.aerospike.client.Record;
 import org.apache.spark.SparkConf;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaPairReceiverInputDStream;
@@ -5,12 +9,13 @@ import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
 import scala.Tuple2;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public class Main {
+    static final AerospikeClient aerospikeClient = new AerospikeClient("172.28.128.3", 3000);
+    static final Key key = new Key("test", "test", "test");
+
     public static void main(String[] args) throws InterruptedException {
         int batchDurationMilliseconds;
 
@@ -34,11 +39,11 @@ public class Main {
         String zkQuorum;
 
         if (args.length < 2) {
-            printWithLines("Missing zkQuorum! Using default of \"localhost:9092,localhost:2181\". To specify a zkQuorum, give it as the second argument to the program.", 5);
-            zkQuorum = "localhost:9092,localhost:2181";
+            printWithLines("Missing zkQuorum! Using default of \"localhost:2181\". To specify a zkQuorum, give it as the second argument to the program.", 5);
+            zkQuorum = "localhost:2181";
         } else {
-            // any characters, then a colon (:), then digits
-            Pattern addressPattern = Pattern.compile(".+:\\d+");
+            // any characters, then a colon (:), then any characters
+            Pattern addressPattern = Pattern.compile(".+:.+");
 
             zkQuorum = args[1];
             for (String address : zkQuorum.split(",")) {
@@ -49,6 +54,15 @@ public class Main {
             }
         }
 
+        String topic;
+
+        if (args.length < 3) {
+            printWithLines("Missing topic! Using default of \"test\". To specify a topic, give it as the third argument to the program.", 5);
+            topic = "test";
+        } else {
+            topic = args[2];
+        }
+
         printWithLines("Using zkQuorum of " + zkQuorum, 2);
         printWithLines("Using batch duration of " + batchDurationMilliseconds + " milliseconds", 2);
 
@@ -57,7 +71,7 @@ public class Main {
         JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.milliseconds(batchDurationMilliseconds));
 
         Map<String, Integer> topics = new HashMap<>();
-        topics.put("test", 1);
+        topics.put(topic, 1);
 
         printWithLines("created topics HashMap", 2);
 
@@ -68,17 +82,36 @@ public class Main {
 
         // set operation to run on each RDD
         kafkaStream.foreachRDD(rdd -> {
+            // key = timestamp; value = value
             if (!rdd.isEmpty()) {
                 List<Tuple2<String, String>> tuples = rdd.collect();
                 for (Tuple2 tuple : tuples) {
-                    printWithLines(tuple._2, 1);
+                    writeBin(tuple._2.toString());
                 }
             }
+
+            readBins();
         });
 
         jssc.start();
 
         jssc.awaitTermination();
+    }
+
+    static int binCount = 0;
+
+    private static void writeBin(String value) {
+        binCount++;
+        aerospikeClient.put(null, key, new Bin(Integer.toString(binCount), value));
+    }
+
+    private static void readBins() {
+        Record record = aerospikeClient.get(null, key);
+        try {
+            printWithLines(record.bins.keySet() + "\n" + record.bins.values(), 5);
+        } catch (NullPointerException e) {
+            // do nothing
+        }
     }
 
     private static void printLines(int lines) {

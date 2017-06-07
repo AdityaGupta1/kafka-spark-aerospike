@@ -49,10 +49,12 @@ mvn package
 +
 [text]
 ----
-spark-submit --class "Main" --master local[*] target/kafka-spark-aerospike-1.0.jar "localhost:9092,localhost:2181"
+spark-submit --class "Main" --master local[*] target/kafka-spark-aerospike-1.0.jar 1000 "localhost:2181" "test"
 ----
 +
-If you changed the ZooKeeper IP addresses while setting up Kafka, use those instead of `localhost:9092` and `localhost:2181`
+* `1000` is the batch duration (in milliseconds); it specifies how often the stream updates
+* `localhost:2181` is the ZooKeeper IP address; if you used a different port when setting up ZooKeeper, specify that port here
+* `test` is the topic to consume data from; if you used a different topic when setting up Kafka, specify that topic here
 
 {empty} +
 Once Kafka and Spark setup is complete, you should be able to type messages into the Kafka server console window and receive them in the Spark application console window.
