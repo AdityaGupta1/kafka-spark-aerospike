@@ -9,62 +9,21 @@ import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
 import scala.Tuple2;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class Main {
-    static final AerospikeClient aerospikeClient = new AerospikeClient("172.28.128.3", 3000);
-    static final Key key = new Key("test", "test", "test");
+
+    private static String topic;
+    private static int batchDurationMilliseconds;
+    private static String zkQuorum;
+    private static final AerospikeClient aerospikeClient = new AerospikeClient("172.28.128.3", 3000);
+    private static final Key key = new Key("test", "test", "test");
 
     public static void main(String[] args) throws InterruptedException {
-        int batchDurationMilliseconds;
-
-        if (args.length < 1) {
-            printWithLines("Missing batch duration! Using default of \"1000\" (milliseconds). To specify a batch duration, give it (in milliseconds) as the first argument to the program.", 5);
-            batchDurationMilliseconds = 1000;
-        } else {
-            try {
-                batchDurationMilliseconds = Integer.parseInt(args[0]);
-            } catch (NumberFormatException e) {
-                printWithLines("Batch duration must be a positive integer less than 2,147,483,648! Please specify it as such and try again.", 5);
-                return;
-            }
-
-            if (batchDurationMilliseconds < 0) {
-                printWithLines("Batch duration must be a positive integer less than 2,147,483,648! Please specify it as such and try again.", 5);
-                return;
-            }
-        }
-
-        String zkQuorum;
-
-        if (args.length < 2) {
-            printWithLines("Missing zkQuorum! Using default of \"localhost:2181\". To specify a zkQuorum, give it as the second argument to the program.", 5);
-            zkQuorum = "localhost:2181";
-        } else {
-            // any characters, then a colon (:), then any characters
-            Pattern addressPattern = Pattern.compile(".+:.+");
-
-            zkQuorum = args[1];
-            for (String address : zkQuorum.split(",")) {
-                if (!addressPattern.matcher(address).matches()) {
-                    printWithLines("zkQuorum format is incorrect! Please specify it as a comma-separated list of IP addresses and try again.", 5);
-                    return;
-                }
-            }
-        }
-
-        String topic;
-
-        if (args.length < 3) {
-            printWithLines("Missing topic! Using default of \"test\". To specify a topic, give it as the third argument to the program.", 5);
-            topic = "test";
-        } else {
-            topic = args[2];
-        }
-
-        printWithLines("Using zkQuorum of " + zkQuorum, 2);
-        printWithLines("Using batch duration of " + batchDurationMilliseconds + " milliseconds", 2);
+        setArgs(args);
 
         SparkConf conf = new SparkConf().setAppName("KafkaSparkAerospike");
         // Durations.seconds(1) = 1 second batch interval
@@ -124,5 +83,51 @@ public class Main {
         printLines(lines);
         System.out.println(message);
         printLines(lines);
+    }
+
+    private static void setArgs(String[] args) {
+        if (args.length < 1) {
+            printWithLines("Missing batch duration! Using default of \"1000\" (milliseconds). To specify a batch duration, give it (in milliseconds) as the first argument to the program.", 5);
+            batchDurationMilliseconds = 1000;
+        } else {
+            try {
+                batchDurationMilliseconds = Integer.parseInt(args[0]);
+            } catch (NumberFormatException e) {
+                printWithLines("Batch duration must be a positive integer less than 2,147,483,648! Please specify it as such and try again.", 5);
+                return;
+            }
+
+            if (batchDurationMilliseconds < 0) {
+                printWithLines("Batch duration must be a positive integer less than 2,147,483,648! Please specify it as such and try again.", 5);
+                return;
+            }
+        }
+
+        if (args.length < 2) {
+            printWithLines("Missing zkQuorum! Using default of \"localhost:2181\". To specify a zkQuorum, give it as the second argument to the program.", 5);
+            zkQuorum = "localhost:2181";
+        } else {
+            // any characters, then a colon (:), then any characters
+            Pattern addressPattern = Pattern.compile(".+:.+");
+
+            zkQuorum = args[1];
+            for (String address : zkQuorum.split(",")) {
+                if (!addressPattern.matcher(address).matches()) {
+                    printWithLines("zkQuorum format is incorrect! Please specify it as a comma-separated list of IP addresses and try again.", 5);
+                    return;
+                }
+            }
+        }
+
+        if (args.length < 3) {
+            printWithLines("Missing topic! Using default of \"test\". To specify a topic, give it as the third argument to the program.", 5);
+            topic = "test";
+        } else {
+            topic = args[2];
+        }
+
+        printWithLines("Using batch duration of " + batchDurationMilliseconds + " milliseconds", 2);
+        printWithLines("Using zkQuorum of \"" + zkQuorum + "\"", 2);
+        printWithLines("Using topic of \"" + topic + "\"", 2);
     }
 }
