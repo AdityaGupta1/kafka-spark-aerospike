@@ -61,4 +61,6 @@ Once Kafka and Spark setup is complete, you should be able to type messages into
 
 === Aerospike Setup
 
-Will be added once Aerospike integration is added
+Instructions are available on the http://www.aerospike.com/docs/operations/install[Aerospike Installation Guide].
+
+Aerospike can run on Linux normally or on Windows/OS X using Vagrant-managed virtual machines.
