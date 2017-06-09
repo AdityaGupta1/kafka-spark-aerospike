@@ -13,29 +13,39 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public class Main {
+    private static String argDuration, argZk, argTopic, argAerospike;
 
+    private static int batchDuration;
+    private static int defaultBatchDuration = 1000;
+    private static String zk;
+    private static String defaultZk = "localhost:2181";
     private static String topic;
-    private static int batchDurationMilliseconds;
-    private static String zkQuorum;
+    private static String defaultTopic = "test";
+    private static String[] aerospike;
+    private static String[] defaultAerospike = {"localhost", "3000"};
+
+    private static final Pattern ipPattern = Pattern.compile(".+:.+");
+
     private static final AerospikeClient aerospikeClient = new AerospikeClient("172.28.128.3", 3000);
     private static final Key key = new Key("test", "test", "test");
 
     public static void main(String[] args) throws InterruptedException {
+        argDuration = argZk = argTopic = argAerospike = "default";
+
         setArgs(args);
+        checkArgs();
+        printArgs();
 
         SparkConf conf = new SparkConf().setAppName("KafkaSparkAerospike");
-        // Durations.seconds(1) = 1 second batch interval
-        JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.milliseconds(batchDurationMilliseconds));
+        JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.milliseconds(batchDuration));
 
         Map<String, Integer> topics = new HashMap<>();
-        topics.put(topic, 1);
-
-        printWithLines("created topics HashMap", 2);
+        topics.put(argTopic, 1);
 
 
         JavaPairReceiverInputDStream<String, String> kafkaStream =
                 KafkaUtils.createStream(jssc,
-                        zkQuorum, "kafka-spark-aerospike", topics);
+                        zk, "kafka-spark-aerospike", topics);
 
         // set operation to run on each RDD
         kafkaStream.foreachRDD(rdd -> {
@@ -113,49 +123,95 @@ public class Main {
         printLines(lines);
     }
 
+    private static void errorWithLines(Object message, int lines) {
+        printLines(lines);
+        System.err.println(message);
+        printLines(lines);
+    }
+
+    private static final String BATCH_DURATION_KEY = "-duration";
+    private static final String ZK_KEY = "-zk";
+    private static final String TOPIC_KEY = "-topic";
+    private static final String AEROSPIKE_KEY = "-aerospike";
+
     private static void setArgs(String[] args) {
-        if (args.length < 1) {
-            printWithLines("Missing batch duration! Using default of \"1000\" (milliseconds). To specify a batch duration, give it (in milliseconds) as the first argument to the program.", 5);
-            batchDurationMilliseconds = 1000;
+        for (int i = 0; i < args.length; i += 2) {
+            String key = args[i];
+            String value = args[i + 1];
+
+            switch (key) {
+                case BATCH_DURATION_KEY:
+                    argDuration = value;
+                    break;
+                case ZK_KEY:
+                    argZk = value;
+                    break;
+                case TOPIC_KEY:
+                    argTopic = value;
+                    break;
+                case AEROSPIKE_KEY:
+                    argAerospike = value;
+                    break;
+            }
+        }
+    }
+
+    private static void checkArgs() {
+        // batch duration
+        if (argDuration.equals("default")) {
+            batchDuration = defaultBatchDuration;
         } else {
             try {
-                batchDurationMilliseconds = Integer.parseInt(args[0]);
-            } catch (NumberFormatException e) {
-                printWithLines("Batch duration must be a positive integer less than 2,147,483,648! Please specify it as such and try again.", 5);
-                return;
-            }
-
-            if (batchDurationMilliseconds < 0) {
-                printWithLines("Batch duration must be a positive integer less than 2,147,483,648! Please specify it as such and try again.", 5);
-                return;
+                batchDuration = Integer.parseInt(argDuration);
+            } catch (Exception e) {
+                errorWithLines("Invalid batch duration! Using default of " + defaultBatchDuration + " (milliseconds).", 5);
+                batchDuration = defaultBatchDuration;
             }
         }
 
-        if (args.length < 2) {
-            printWithLines("Missing zkQuorum! Using default of \"localhost:2181\". To specify a zkQuorum, give it as the second argument to the program.", 5);
-            zkQuorum = "localhost:2181";
+        // zkQuorum
+        if (argZk.equals("default")) {
+            zk = defaultZk;
         } else {
-            // any characters, then a colon (:), then any characters
-            Pattern addressPattern = Pattern.compile(".+:.+");
-
-            zkQuorum = args[1];
-            for (String address : zkQuorum.split(",")) {
-                if (!addressPattern.matcher(address).matches()) {
-                    printWithLines("zkQuorum format is incorrect! Please specify it as a comma-separated list of IP addresses and try again.", 5);
-                    return;
+            boolean validZk = true;
+            for (String ip : argZk.split(",")) {
+                if (!ipPattern.matcher(ip).matches()) {
+                    validZk = false;
                 }
             }
+
+            if (!validZk) {
+                errorWithLines("Invalid ZooKeeper IP addresses! Please specify them as a comma-separated list of addresses. Using default of \"" + defaultZk + "\".", 5);
+                zk = defaultZk;
+            } else {
+                zk = argZk;
+            }
         }
 
-        if (args.length < 3) {
-            printWithLines("Missing topic! Using default of \"test\". To specify a topic, give it as the third argument to the program.", 5);
-            topic = "test";
+        // topic
+        if (argTopic.equals("default")) {
+            topic = defaultTopic;
         } else {
-            topic = args[2];
+            topic = argTopic;
         }
 
-        printWithLines("Using batch duration of " + batchDurationMilliseconds + " milliseconds", 2);
-        printWithLines("Using zkQuorum of \"" + zkQuorum + "\"", 2);
-        printWithLines("Using topic of \"" + topic + "\"", 2);
+        // Aerospike
+        if (argAerospike.equals("default")) {
+            aerospike = defaultAerospike;
+        } else {
+            if (!ipPattern.matcher(argAerospike).matches()) {
+                errorWithLines("Invalid Aerospike IP addresses! Using default of \"" + defaultAerospike[0] + ":" + defaultAerospike[1] + "\".", 5);
+                aerospike = defaultAerospike;
+            } else {
+                aerospike = argAerospike.split(":");
+            }
+        }
+    }
+
+    private static void printArgs() {
+        printWithLines("Batch duration: " + batchDuration + " milliseconds\n" +
+                "ZooKeeper IP addresses: \"" + zk + "\"\n" +
+                "Topic: \"" + topic + "\"\n" +
+                "Aerospike IP address: \"" + aerospike[0] + ":" + aerospike[1] + "\"", 5);
     }
 }
