@@ -9,13 +9,8 @@ import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kafka.KafkaUtils;
 import scala.Tuple2;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class Main {
 
@@ -75,25 +70,32 @@ public class Main {
     private static int binCount = checkForBins() ? record.bins.size() : 0;
 
     private static void writeBin(String value) {
-        aerospikeClient.put(null, key, new Bin(Integer.toString(binCount), value));
         binCount++;
+        aerospikeClient.put(null, key, new Bin(Integer.toString(binCount - 1), value));
     }
 
     private static void readBins() {
-        if (!checkForBins()) {
+        printWithLines(binCount, 10);
+
+        if (!checkForBins() || binCount == 0) {
             return;
         }
 
         record = aerospikeClient.get(null, key);
 
-        // List of integers from 0 to binCount
-        List<Integer> keys = IntStream.rangeClosed(0, binCount - 1)
-                .boxed().collect(Collectors.toList());
+        // key values in order
+        List<String> keys = new ArrayList<>(record.bins.keySet());
+        Collections.sort(keys, (string1, string2) -> {
+            int int1 = Integer.parseInt(string1);
+            int int2 = Integer.parseInt(string2);
+            return Integer.compare(int1, int2);
+        });
+
         // bin values in order
         List<Object> values = new ArrayList<>();
 
-        for (int bin = 0; bin < binCount; bin++) {
-            values.add(record.bins.get(Integer.toString(bin)));
+        for (String bin : keys) {
+            values.add(record.bins.get(bin));
         }
 
         printWithLines(keys + "\n" + values, 5);
