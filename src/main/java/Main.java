@@ -85,7 +85,7 @@ public class Main {
 
         // key values in order
         List<String> keys = new ArrayList<>(record.bins.keySet());
-        Collections.sort(keys, (string1, string2) -> {
+        keys.sort((string1, string2) -> {
             int int1 = Integer.parseInt(string1);
             int int2 = Integer.parseInt(string2);
             return Integer.compare(int1, int2);
