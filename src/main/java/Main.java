@@ -28,6 +28,7 @@ public class Main {
 
     private static AerospikeClient aerospikeClient = null;
     private static final Key key = new Key("test", "test", "test");
+    private static Record record;
 
     public static void main(String[] args) throws InterruptedException {
         argDuration = argZk = argTopic = argAerospike = "default";
@@ -37,6 +38,7 @@ public class Main {
         printArgs();
 
         aerospikeClient = new AerospikeClient(aerospike[0], Integer.parseInt(aerospike[1]));
+        record = aerospikeClient.get(null, key);
 
         SparkConf conf = new SparkConf().setAppName("KafkaSparkAerospike");
         JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.milliseconds(batchDuration));
@@ -66,8 +68,6 @@ public class Main {
 
         jssc.awaitTermination();
     }
-
-    private static Record record = aerospikeClient.get(null, key);
 
     private static boolean checkForBins() {
         try {
