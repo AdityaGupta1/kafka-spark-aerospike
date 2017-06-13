@@ -23,10 +23,11 @@ public class Main {
     private static String defaultTopic = "test";
     private static String[] aerospike;
     private static String[] defaultAerospike = {"localhost", "3000"};
+    private static boolean aerospikeDisabled = false;
 
     private static final Pattern ipPattern = Pattern.compile(".+:.+");
 
-    private static AerospikeClient aerospikeClient = null;
+    private static AerospikeClient aerospikeClient;
     private static final Key key = new Key("test", "test", "test");
     private static Record record;
 
@@ -37,8 +38,10 @@ public class Main {
         checkArgs();
         printArgs();
 
-        aerospikeClient = new AerospikeClient(aerospike[0], Integer.parseInt(aerospike[1]));
-        record = aerospikeClient.get(null, key);
+        if (!aerospikeDisabled) {
+            aerospikeClient = new AerospikeClient(aerospike[0], Integer.parseInt(aerospike[1]));
+            record = aerospikeClient.get(null, key);
+        }
 
         SparkConf conf = new SparkConf().setAppName("KafkaSparkAerospike");
         JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.milliseconds(batchDuration));
@@ -57,11 +60,17 @@ public class Main {
             if (!rdd.isEmpty()) {
                 List<Tuple2<String, String>> tuples = rdd.collect();
                 for (Tuple2 tuple : tuples) {
-                    writeBin(tuple._2.toString());
+                    if (!aerospikeDisabled) {
+                        writeBin(tuple._2.toString());
+                    } else {
+                        printWithLines(tuple._2.toString(), 2);
+                    }
                 }
             }
 
-            readBins();
+            if (!aerospikeDisabled) {
+                readBins();
+            }
         });
 
         jssc.start();
@@ -200,6 +209,8 @@ public class Main {
         // Aerospike
         if (argAerospike.equals("default")) {
             aerospike = defaultAerospike;
+        } else if (argAerospike.equals("disabled")) {
+            aerospikeDisabled = true;
         } else {
             if (!ipPattern.matcher(argAerospike).matches()) {
                 errorWithLines("Invalid Aerospike IP addresses! Using default of \"" + defaultAerospike[0] + ":" + defaultAerospike[1] + "\".", 5);
@@ -211,9 +222,15 @@ public class Main {
     }
 
     private static void printArgs() {
+        String aerospikeMessage = "Aerospike IP address: \"" + aerospike[0] + ":" + aerospike[1] + "\"";
+
+        if (aerospikeDisabled) {
+            aerospikeMessage = "Aerospike disabled";
+        }
+
         printWithLines("Batch duration: " + batchDuration + " milliseconds\n" +
                 "ZooKeeper IP addresses: \"" + zk + "\"\n" +
                 "Topic: \"" + topic + "\"\n" +
-                "Aerospike IP address: \"" + aerospike[0] + ":" + aerospike[1] + "\"", 5);
+                aerospikeMessage, 5);
     }
 }
