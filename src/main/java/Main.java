@@ -222,10 +222,12 @@ public class Main {
     }
 
     private static void printArgs() {
-        String aerospikeMessage = "Aerospike IP address: \"" + aerospike[0] + ":" + aerospike[1] + "\"";
+        String aerospikeMessage;
 
         if (aerospikeDisabled) {
             aerospikeMessage = "Aerospike disabled";
+        } else {
+            aerospikeMessage = "Aerospike IP address: \"" + aerospike[0] + ":" + aerospike[1] + "\"";
         }
 
         printWithLines("Batch duration: " + batchDuration + " milliseconds\n" +
