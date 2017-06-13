@@ -26,7 +26,7 @@ public class Main {
 
     private static final Pattern ipPattern = Pattern.compile(".+:.+");
 
-    private static final AerospikeClient aerospikeClient = new AerospikeClient("172.28.128.3", 3000);
+    private static AerospikeClient aerospikeClient = null;
     private static final Key key = new Key("test", "test", "test");
 
     public static void main(String[] args) throws InterruptedException {
@@ -35,6 +35,8 @@ public class Main {
         setArgs(args);
         checkArgs();
         printArgs();
+
+        aerospikeClient = new AerospikeClient(aerospike[0], Integer.parseInt(aerospike[1]));
 
         SparkConf conf = new SparkConf().setAppName("KafkaSparkAerospike");
         JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.milliseconds(batchDuration));
